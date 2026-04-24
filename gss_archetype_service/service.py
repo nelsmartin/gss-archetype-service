@@ -6,6 +6,7 @@ from gss_archetype_service.archetypes import DEFAULT_MIN_YEAR, build_archetypes
 from gss_archetype_service.interpret import interpret
 from gss_archetype_service.loader import load_gss, load_value_labels
 from gss_archetype_service.preprocess import FEATURE_COLUMNS
+from gss_archetype_service.schemas import Archetype, HealthResponse
 
 state: dict = {}
 
@@ -21,11 +22,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title="GSS Archetype Service")
 
 
-@app.get("/archetypes")
+@app.get("/archetypes", response_model=list[Archetype])
 def get_archetypes(
     k: int = Query(..., ge=1, description="Number of archetypes to produce"),
     min_year: int = Query(DEFAULT_MIN_YEAR, ge=1972, description="Earliest GSS wave to include"),
-) -> list[dict]:
+):
     try:
         result = build_archetypes(k=k, min_year=min_year, df=state["df"])
     except ValueError as e:
@@ -33,6 +34,6 @@ def get_archetypes(
     return interpret(result, state["value_labels"])
 
 
-@app.get("/health")
-def health() -> dict:
+@app.get("/health", response_model=HealthResponse)
+def health():
     return {"status": "ok", "rows_loaded": len(state.get("df", []))}
